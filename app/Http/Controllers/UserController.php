@@ -3,30 +3,21 @@
 namespace App\Http\Controllers;
 
 use App\Model\User;
-//use App\Traits\ApiResponse;
+use App\Model\UserJob; 
+use App\Traits\ApiResponser;
 use Illuminate\Http\Response;
 use Illuminate\Http\Request;
 use DB;
 
 Class UserController extends Controller {
+    use ApiResponser;
+    
     private $request;
 
     public function __construct(Request $request){
         $this->request = $request;
     }
     
-    //************************************************************/
-
-    public function successResponse($data, $code = Response::HTTP_OK){
-        return response()->json(['data' => $data, 'site' => 2], $code);
-    }
-
-    public function errorResponse($message, $code){
-        return response()->json(['error' => $message, 'site' => 2, 'code' => $code], $code);
-    }
-
-    //************************************************************/
-
 
     //GET the data from the database
     public function getUsers(){
@@ -48,10 +39,14 @@ Class UserController extends Controller {
         $rules = [
             'username' => 'required | max: 20',
             'password' => 'required | max: 20',
+            'jobid' => 'required|numeric|min:1|not_in:0',
         ]; //these 2 are the requirement fields
 
         $this->validate($request,$rules); // validate which is under your request
         
+        // validate if Jobid is found inthe table tbluserjob
+        $userjob =UserJob::findOrFail($request->jobid);
+
         $user = User::create($request->all()); //eloquent create, all meaning all the fields in your model
 
         return  $this->successResponse($user, Response::HTTP_CREATED);
@@ -78,14 +73,20 @@ Class UserController extends Controller {
         $rules = [
             'username' => 'max: 20',
             'password' => 'max: 20',
+            'jobid' => 'required|numeric|min:1|not_in:0',
         ]; //these 2 are the requirement fields
         
+        $this->validate($request, $rules);
+
+        $userjob =UserJob::findOrFail($request->jobid);
+
+        $user = User::findOrFail($id);
 
         if($user){
             $user->fill($request->all());
             
             if($user->isClean()){
-                return "No changes where made.";
+                return $this->errorResponse('At least one value must change', Response::HTTP_UNPROCESSABLE_ENTITY);
             }
 
         }
